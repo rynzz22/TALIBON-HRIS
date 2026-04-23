@@ -3,94 +3,92 @@ export type EmploymentStatus = 'Regular' | 'Casual' | 'Contractual';
 
 export interface Employee {
   id: string;
-  firstName: string;
-  lastName: string;
+  first_name: string;
+  last_name: string;
   email: string;
   department: Department;
   position: string;
   salary: number;
-  hireDate: string;
+  hire_date: string;
   role: Role;
   status: 'active' | 'inactive';
-  employmentStatus: EmploymentStatus;
-  govIds: {
-    sss?: string;
-    philhealth?: string;
-    pagibig?: string;
-    tin?: string;
-  };
-  leaveBalances: {
-    vacation: number;
-    sick: number;
-    emergency: number;
-  };
+  employment_status: EmploymentStatus;
+  sss?: string;
+  philhealth?: string;
+  pagibig?: string;
+  tin?: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface AttendanceRecord {
   id: string;
-  employeeId: string;
+  employee_id: string;
   date: string; // YYYY-MM-DD
-  timeIn: string; // ISO
-  timeOut?: string; // ISO
-  totalHours: number;
+  time_in: string; // ISO
+  time_out?: string; // ISO
+  total_hours: number;
   status: 'present' | 'late' | 'absent' | 'undertime';
-  isCorrectionRequested?: boolean;
-  correctionNote?: string;
+  is_correction_requested?: boolean;
+  correction_note?: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface PayrollRecord {
   id: string;
-  employeeId: string;
+  employee_id: string;
   period: string; // YYYY-MM
-  basicSalary: number;
-  allowances: {
-    hazard?: number;
-    bonus?: number;
-    other?: number;
-  };
-  deductions: {
-    sss: number;
-    philhealth: number;
-    pagibig: number;
-    tax: number;
-    latePenalty: number;
-  };
-  overtimePay: number;
-  grossPay: number;
-  netPay: number;
+  basic_salary: number;
+  hazard_allowance?: number;
+  bonus_allowance?: number;
+  other_allowance?: number;
+  sss_deduction: number;
+  philhealth_deduction: number;
+  pagibig_deduction: number;
+  tax_deduction: number;
+  late_penalty: number;
+  overtime_pay: number;
+  gross_pay: number;
+  net_pay: number;
   status: 'pending' | 'approved' | 'paid';
-  processedAt?: string;
+  processed_at?: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface LeaveRequest {
   id: string;
-  employeeId: string;
+  employee_id: string;
   type: 'Vacation' | 'Sick' | 'Maternity' | 'Paternity' | 'Emergency';
-  startDate: string;
-  endDate: string;
+  start_date: string;
+  end_date: string;
   reason: string;
   status: 'pending' | 'approved' | 'rejected';
-  requestedAt: string;
+  requested_at: string;
   remarks?: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface AuditLog {
   id: string;
-  userId: string;
-  userName: string;
+  user_id: string;
+  user_name: string;
   action: string;
   target: string;
   timestamp: string;
+  created_at?: string;
 }
 
 export interface AppNotification {
   id: string;
-  userId: string;
+  user_id: string;
   title: string;
   message: string;
   type: 'info' | 'success' | 'warning' | 'error';
-  isRead: boolean;
-  createdAt: string;
+  is_read: boolean;
+  created_at: string;
 }
 
 export const DEPARTMENTS = [

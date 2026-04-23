@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { Role, Employee } from '../types';
-import { AuthAPI } from '../lib/api';
+import { SupabaseService } from '../lib/supabaseService';
 import { useToast } from './ToastContext';
 
 interface AuthContextType {
@@ -23,47 +23,66 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const { addToast } = useToast();
 
-  // Initialize auth state from localStorage/session
+  // Initialize auth state from Supabase
   useEffect(() => {
     const initializeAuth = async () => {
       try {
-        const storedUser = localStorage.getItem('authUser');
-        const storedRole = localStorage.getItem('userRole');
+        const { data, error } = await SupabaseService.auth.getCurrentUser();
+        if (error || !data.user) {
+          setIsLoading(false);
+          return;
+        }
 
-        if (storedUser) {
-          const user = JSON.parse(storedUser);
-          setCurrentUser(user);
-          setCurrentRole((storedRole as Role) || 'employee');
+        // Fetch employee data from Supabase
+        const { data: employee, error: empError } = await SupabaseService.employees.getById(
+          data.user.id
+        );
+
+        if (!empError && employee) {
+          setCurrentUser(employee as any);
+          setCurrentRole(employee.role as Role);
           setIsAuthenticated(true);
         }
       } catch (error) {
         console.error('Failed to restore auth state:', error);
-        localStorage.removeItem('authUser');
-        localStorage.removeItem('userRole');
       } finally {
         setIsLoading(false);
       }
     };
 
     initializeAuth();
+
+    // Listen for auth changes
+    const unsubscribe = SupabaseService.auth.onAuthStateChange((user) => {
+      if (!user) {
+        setCurrentUser(null);
+        setIsAuthenticated(false);
+      }
+    });
+
+    return () => unsubscribe?.();
   }, []);
 
   const login = useCallback(
     async (email: string, password: string) => {
       try {
         setIsLoading(true);
-        // Call backend auth endpoint
-        const response = await AuthAPI.login({ email, password });
-        const user = response.data.user;
+        const { data, error } = await SupabaseService.auth.login(email, password);
 
-        setCurrentUser(user);
-        setCurrentRole(user.role);
+        if (error) throw error;
+
+        // Fetch employee data
+        const { data: employee, error: empError } = await SupabaseService.employees.getById(
+          data.user!.id
+        );
+
+        if (empError) throw empError;
+
+        setCurrentUser(employee as any);
+        setCurrentRole(employee.role as Role);
         setIsAuthenticated(true);
 
-        localStorage.setItem('authUser', JSON.stringify(user));
-        localStorage.setItem('userRole', user.role);
-
-        addToast(`Welcome back, ${user.firstName}!`, 'success');
+        addToast(`Welcome back, ${employee.first_name}!`, 'success');
       } catch (error) {
         addToast(error instanceof Error ? error.message : 'Login failed', 'error');
         throw error;
@@ -77,14 +96,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = useCallback(async () => {
     try {
       setIsLoading(true);
-      await AuthAPI.logout();
+      await SupabaseService.auth.logout();
 
       setCurrentUser(null);
       setCurrentRole('employee');
       setIsAuthenticated(false);
-
-      localStorage.removeItem('authUser');
-      localStorage.removeItem('userRole');
 
       addToast('Logged out successfully', 'success');
     } catch (error) {
@@ -100,8 +116,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (currentUser) {
       const updatedUser = { ...currentUser, role };
       setCurrentUser(updatedUser);
-      localStorage.setItem('authUser', JSON.stringify(updatedUser));
-      localStorage.setItem('userRole', role);
     }
   }, [currentUser]);
 

@@ -1,13 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { 
-  LayoutDashboard, Users, CreditCard, Plus, Trash2, Edit2, Search, Building2, 
-  Calendar, Mail, DollarSign, ChevronRight, LogIn, Shield, UserCircle, 
-  Briefcase, Bell, LogOut, Copy, Sparkles, PlayCircle, Clock, AlertCircle
+  LayoutDashboard, Users, CreditCard, Building2, 
+  Shield, Briefcase, Bell, LogOut, Sparkles, Clock
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Employee, PayrollRecord, DEPARTMENTS, Role } from './types';
-import { EmployeeAPI, AttendanceAPI, AuditAPI, NotificationAPI } from './lib/api';
+import { Employee, Role } from './types';
+import { SupabaseService } from './lib/supabaseService';
 import { cn, formatDate } from './lib/utils';
 import { useAuth, ProtectedFeature } from './contexts/AuthContext';
 import { useToast } from './contexts/ToastContext';
@@ -43,7 +42,11 @@ function AppContent() {
     refetch: refetchEmployees
   } = useQuery({
     queryKey: ['employees'],
-    queryFn: () => EmployeeAPI.list(),
+    queryFn: async () => {
+      const { data, error } = await SupabaseService.employees.list();
+      if (error) throw error;
+      return { data };
+    },
     retry: 2,
   });
 
@@ -53,7 +56,11 @@ function AppContent() {
     refetch: refetchAttendance
   } = useQuery({
     queryKey: ['attendance'],
-    queryFn: () => AttendanceAPI.list(),
+    queryFn: async () => {
+      const { data, error } = await SupabaseService.attendance.list();
+      if (error) throw error;
+      return { data };
+    },
   });
 
   const { 
@@ -62,7 +69,11 @@ function AppContent() {
     refetch: refetchAudit
   } = useQuery({
     queryKey: ['audit'],
-    queryFn: () => AuditAPI.list(),
+    queryFn: async () => {
+      const { data, error } = await SupabaseService.audit.list();
+      if (error) throw error;
+      return { data };
+    },
   });
 
   const employees = Array.isArray(employeeResponse?.data) ? employeeResponse.data : [];
@@ -76,14 +87,16 @@ function AppContent() {
       if (!validation.isValid) {
         throw new Error(validation.errors[0].message);
       }
-      return EmployeeAPI.create(newEmp);
+      const { data, error } = await SupabaseService.employees.create(newEmp);
+      if (error) throw error;
+      return data;
     },
     onSuccess: () => {
       addToast('Employee added successfully', 'success');
       queryClient.invalidateQueries({ queryKey: ['employees'] });
-      AuditAPI.log({
-        userId: currentUser?.id || 'system',
-        userName: `${currentUser?.firstName} ${currentUser?.lastName}`,
+      SupabaseService.audit.log({
+        user_id: currentUser?.id || 'system',
+        user_name: `${currentUser?.first_name} ${currentUser?.last_name}`,
         action: 'CREATE',
         target: 'Employee',
       });
@@ -94,13 +107,13 @@ function AppContent() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => EmployeeAPI.delete(id),
+    mutationFn: (id: string) => SupabaseService.employees.delete(id),
     onSuccess: (_, employeeId) => {
       addToast('Employee deleted successfully', 'success');
       queryClient.invalidateQueries({ queryKey: ['employees'] });
-      AuditAPI.log({
-        userId: currentUser?.id || 'system',
-        userName: `${currentUser?.firstName} ${currentUser?.lastName}`,
+      SupabaseService.audit.log({
+        user_id: currentUser?.id || 'system',
+        user_name: `${currentUser?.first_name} ${currentUser?.last_name}`,
         action: 'DELETE',
         target: `Employee ${employeeId}`,
       });
@@ -111,13 +124,13 @@ function AppContent() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: any }) => EmployeeAPI.update(id, data),
+    mutationFn: ({ id, data }: { id: string; data: any }) => SupabaseService.employees.update(id, data),
     onSuccess: (_, { id }) => {
       addToast('Employee updated successfully', 'success');
       queryClient.invalidateQueries({ queryKey: ['employees'] });
-      AuditAPI.log({
-        userId: currentUser?.id || 'system',
-        userName: `${currentUser?.firstName} ${currentUser?.lastName}`,
+      SupabaseService.audit.log({
+        user_id: currentUser?.id || 'system',
+        user_name: `${currentUser?.first_name} ${currentUser?.last_name}`,
         action: 'UPDATE',
         target: `Employee ${id}`,
       });
@@ -234,7 +247,7 @@ function AppContent() {
             <div className="h-4 w-[1px] bg-white/10"></div>
           </div>
           <div className="w-8 h-8 bg-talibon-orange rounded-full flex items-center justify-center text-white text-[8px] font-black border-2 border-white/10 uppercase">
-            {currentUser?.firstName?.slice(0, 1)}{currentUser?.lastName?.slice(0, 1)}
+            {currentUser?.first_name?.slice(0, 1)}{currentUser?.last_name?.slice(0, 1)}
           </div>
           <button
             onClick={handleLogout}
@@ -272,7 +285,7 @@ function AppContent() {
           <div className="flex items-center gap-4">
             <div className="text-right">
               <p className="text-[10px] font-black text-slate-800 uppercase tracking-widest">
-                {currentUser?.firstName} {currentUser?.lastName}
+                {currentUser?.first_name} {currentUser?.last_name}
               </p>
               <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-0.5">
                 {formatDate(new Date())}
@@ -342,7 +355,7 @@ function AppContent() {
                   <AttendanceTracker 
                     records={attendanceRecords} 
                     currentUserRole={currentRole}
-                    onLog={(type) => AttendanceAPI.log(currentUser?.id || '1', type).then(() => 
+                    onLog={(type) => SupabaseService.attendance.log(currentUser?.id || '1', type).then(() => 
                       queryClient.invalidateQueries({ queryKey: ['attendance'] })
                     ).catch((error) => {
                       addToast(error.message || 'Failed to log attendance', 'error');
