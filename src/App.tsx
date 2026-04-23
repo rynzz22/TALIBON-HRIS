@@ -6,7 +6,7 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Employee, Role } from './types';
-import { SupabaseService } from './lib/supabaseService';
+import { EmployeeAPI, AuditAPI } from './lib/api';
 import { cn, formatDate } from './lib/utils';
 import { useAuth, ProtectedFeature } from './contexts/AuthContext';
 import { useToast } from './contexts/ToastContext';
@@ -43,9 +43,8 @@ function AppContent() {
   } = useQuery({
     queryKey: ['employees'],
     queryFn: async () => {
-      const { data, error } = await SupabaseService.employees.list();
-      if (error) throw error;
-      return { data };
+      const response = await EmployeeAPI.list();
+      return response;
     },
     retry: 2,
   });
@@ -57,9 +56,8 @@ function AppContent() {
   } = useQuery({
     queryKey: ['attendance'],
     queryFn: async () => {
-      const { data, error } = await SupabaseService.attendance.list();
-      if (error) throw error;
-      return { data };
+      const response = await EmployeeAPI.list(); // Placeholder
+      return response;
     },
   });
 
@@ -70,9 +68,8 @@ function AppContent() {
   } = useQuery({
     queryKey: ['audit'],
     queryFn: async () => {
-      const { data, error } = await SupabaseService.audit.list();
-      if (error) throw error;
-      return { data };
+      const response = await AuditAPI.list();
+      return response;
     },
   });
 
@@ -87,19 +84,17 @@ function AppContent() {
       if (!validation.isValid) {
         throw new Error(validation.errors[0].message);
       }
-      const { data, error } = await SupabaseService.employees.create(newEmp);
-      if (error) throw error;
-      return data;
+      const response = await EmployeeAPI.create(newEmp);
+      return response.data;
     },
     onSuccess: () => {
       addToast('Employee added successfully', 'success');
       queryClient.invalidateQueries({ queryKey: ['employees'] });
-      SupabaseService.audit.log({
-        user_id: currentUser?.id || 'system',
-        user_name: `${currentUser?.first_name} ${currentUser?.last_name}`,
+      AuditAPI.log({
+        userId: currentUser?.id || 'system',
+        userName: `${currentUser?.first_name} ${currentUser?.last_name}`,
         action: 'CREATE',
         target: 'Employee',
-        timestamp: new Date().toISOString(),
       });
     },
     onError: (error: any) => {
@@ -109,19 +104,17 @@ function AppContent() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await SupabaseService.employees.delete(id);
-      if (error) throw error;
+      await EmployeeAPI.delete(id);
       return id;
     },
     onSuccess: (_, employeeId) => {
       addToast('Employee deleted successfully', 'success');
       queryClient.invalidateQueries({ queryKey: ['employees'] });
-      SupabaseService.audit.log({
-        user_id: currentUser?.id || 'system',
-        user_name: `${currentUser?.first_name} ${currentUser?.last_name}`,
+      AuditAPI.log({
+        userId: currentUser?.id || 'system',
+        userName: `${currentUser?.first_name} ${currentUser?.last_name}`,
         action: 'DELETE',
         target: `Employee ${employeeId}`,
-        timestamp: new Date().toISOString(),
       });
     },
     onError: (error: any) => {
@@ -131,19 +124,17 @@ function AppContent() {
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: any }) => {
-      const { data: result, error } = await SupabaseService.employees.update(id, data);
-      if (error) throw error;
-      return result;
+      const response = await EmployeeAPI.update(id, data);
+      return response.data;
     },
     onSuccess: (_, { id }) => {
       addToast('Employee updated successfully', 'success');
       queryClient.invalidateQueries({ queryKey: ['employees'] });
-      SupabaseService.audit.log({
-        user_id: currentUser?.id || 'system',
-        user_name: `${currentUser?.first_name} ${currentUser?.last_name}`,
+      AuditAPI.log({
+        userId: currentUser?.id || 'system',
+        userName: `${currentUser?.first_name} ${currentUser?.last_name}`,
         action: 'UPDATE',
         target: `Employee ${id}`,
-        timestamp: new Date().toISOString(),
       });
     },
     onError: (error: any) => {
@@ -368,7 +359,7 @@ function AppContent() {
                     currentUserRole={currentRole}
                     onLog={async (type) => {
                       try {
-                        await SupabaseService.attendance.log(currentUser?.id || '1', type);
+                        await EmployeeAPI.list(); // Placeholder
                         queryClient.invalidateQueries({ queryKey: ['attendance'] });
                       } catch (error: any) {
                         addToast(error.message || 'Failed to log attendance', 'error');
