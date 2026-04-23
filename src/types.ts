@@ -1,6 +1,19 @@
+// ============================================
+// TALIBON HRIS — Canonical Type Definitions
+// ============================================
+
 export type Role = 'admin' | 'dept_head' | 'employee' | 'payroll_officer';
 export type EmploymentStatus = 'Regular' | 'Casual' | 'Contractual';
+export type EmployeeStatus = 'active' | 'inactive';
 
+export interface GovIds {
+  sss?: string;
+  philhealth?: string;
+  pagibig?: string;
+  tin?: string;
+}
+
+// Matches Supabase snake_case column names
 export interface Employee {
   id: string;
   first_name: string;
@@ -11,7 +24,7 @@ export interface Employee {
   salary: number;
   hire_date: string;
   role: Role;
-  status: 'active' | 'inactive';
+  status: EmployeeStatus;
   employment_status: EmploymentStatus;
   sss?: string;
   philhealth?: string;
@@ -24,9 +37,9 @@ export interface Employee {
 export interface AttendanceRecord {
   id: string;
   employee_id: string;
-  date: string; // YYYY-MM-DD
-  time_in: string; // ISO
-  time_out?: string; // ISO
+  date: string;          // YYYY-MM-DD
+  time_in: string;       // ISO timestamp
+  time_out?: string;     // ISO timestamp
   total_hours: number;
   status: 'present' | 'late' | 'absent' | 'undertime';
   is_correction_requested?: boolean;
@@ -38,7 +51,7 @@ export interface AttendanceRecord {
 export interface PayrollRecord {
   id: string;
   employee_id: string;
-  period: string; // YYYY-MM
+  period: string;           // YYYY-MM
   basic_salary: number;
   hazard_allowance?: number;
   bonus_allowance?: number;
@@ -99,7 +112,7 @@ export const DEPARTMENTS = [
   'Agriculture',
   'Tourism',
   'Social Welfare',
-  'Planning & Development'
+  'Planning & Development',
 ] as const;
 
 export type Department = (typeof DEPARTMENTS)[number];

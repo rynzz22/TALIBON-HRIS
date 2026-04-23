@@ -1,7 +1,19 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { Role, Employee } from '../types';
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
+import { Employee, Role } from '../types';
 import { SupabaseService } from '../lib/supabaseService';
+import { AuthAPI } from '../lib/api';
 import { useToast } from './ToastContext';
+
+// ============================================
+// TYPES
+// ============================================
 
 interface AuthContextType {
   currentUser: Employee | null;
@@ -10,161 +22,145 @@ interface AuthContextType {
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
-  updateRole: (role: Role) => void;
   hasPermission: (requiredRoles: Role[]) => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// ============================================
+// PROVIDER
+// ============================================
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [currentUser, setCurrentUser] = useState<Employee | null>(null);
-  const [currentRole, setCurrentRole] = useState<Role>('employee');
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const { addToast } = useToast();
+  const unsubRef = useRef<(() => void) | null>(null);
 
-  // Initialize auth state from Supabase
+  // Derived state — avoids double source of truth
+  const currentRole: Role = currentUser?.role ?? 'employee';
+  const isAuthenticated = currentUser !== null;
+
+  // ── Restore session on mount ──────────────────────────────────────────────
   useEffect(() => {
-    const initializeAuth = async () => {
+    let cancelled = false;
+
+    const init = async () => {
       try {
         const { data, error } = await SupabaseService.auth.getCurrentUser();
-        if (error || !data.user) {
-          setIsLoading(false);
-          return;
-        }
+        if (cancelled) return;
 
-        // Fetch employee data from Supabase
-        const { data: employee, error: empError } = await SupabaseService.employees.getById(
-          data.user.id
-        );
-
-        if (!empError && employee) {
-          setCurrentUser(employee as any);
-          setCurrentRole(employee.role as Role);
-          setIsAuthenticated(true);
+        if (!error && data?.user) {
+          const { data: emp, error: empErr } = await SupabaseService.employees.getById(data.user.id);
+          if (!cancelled && !empErr && emp) {
+            setCurrentUser(emp as Employee);
+          }
         }
-      } catch (error) {
-        console.error('Failed to restore auth state:', error);
+      } catch {
+        // silently ignore — user stays logged-out
       } finally {
-        setIsLoading(false);
+        if (!cancelled) setIsLoading(false);
       }
     };
 
-    initializeAuth();
+    init();
 
-    // Listen for auth changes
-    const unsubscribe = SupabaseService.auth.onAuthStateChange((user) => {
-      if (!user) {
-        setCurrentUser(null);
-        setIsAuthenticated(false);
-      }
-    });
+    // Supabase auth state listener (handles token refresh, tab-sync, etc.)
+    const { data: { subscription } } = (SupabaseService.auth as any).onAuthStateChangeRaw?.() ?? {
+      data: { subscription: null },
+    };
+    if (subscription) unsubRef.current = () => subscription.unsubscribe();
 
-    return () => unsubscribe?.();
+    return () => {
+      cancelled = true;
+      unsubRef.current?.();
+    };
   }, []);
 
+  // ── Login ─────────────────────────────────────────────────────────────────
   const login = useCallback(
     async (email: string, password: string) => {
+      setIsLoading(true);
       try {
-        setIsLoading(true);
-        const { data, error } = await SupabaseService.auth.login(email, password);
+        // Try Supabase auth first; fall back to NestJS mock endpoint.
+        const { data: authData, error: authError } = await SupabaseService.auth.login(email, password);
 
-        if (error) throw error;
-
-        // Fetch employee data
-        const { data: employee, error: empError } = await SupabaseService.employees.getById(
-          data.user!.id
-        );
-
-        if (empError) throw empError;
-
-        setCurrentUser(employee as any);
-        setCurrentRole(employee.role as Role);
-        setIsAuthenticated(true);
-
-        addToast(`Welcome back, ${employee.first_name}!`, 'success');
-      } catch (error) {
-        addToast(error instanceof Error ? error.message : 'Login failed', 'error');
-        throw error;
+        if (!authError && authData?.user) {
+          // Supabase path
+          const { data: emp, error: empErr } = await SupabaseService.employees.getById(authData.user.id);
+          if (empErr) throw new Error('Employee record not found.');
+          setCurrentUser(emp as Employee);
+          addToast(`Welcome back, ${(emp as Employee).first_name}!`, 'success');
+        } else {
+          // NestJS mock path (offline / no Supabase config)
+          const res = await AuthAPI.login(email, password);
+          const payload = (res as any).data as { user: Employee; token: string };
+          localStorage.setItem('authToken', payload.token);
+          setCurrentUser(payload.user);
+          addToast(`Welcome back, ${payload.user.first_name}!`, 'success');
+        }
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : 'Login failed. Please try again.';
+        addToast(msg, 'error');
+        throw err;
       } finally {
         setIsLoading(false);
       }
     },
-    [addToast]
+    [addToast],
   );
 
+  // ── Logout ────────────────────────────────────────────────────────────────
   const logout = useCallback(async () => {
+    setIsLoading(true);
     try {
-      setIsLoading(true);
       await SupabaseService.auth.logout();
-
-      setCurrentUser(null);
-      setCurrentRole('employee');
-      setIsAuthenticated(false);
-
-      addToast('Logged out successfully', 'success');
-    } catch (error) {
-      addToast('Logout failed', 'error');
-      throw error;
-    } finally {
-      setIsLoading(false);
+    } catch {
+      // ignore — clear local state regardless
     }
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('authEmployee');
+    setCurrentUser(null);
+    addToast('Logged out successfully.', 'success');
+    setIsLoading(false);
   }, [addToast]);
 
-  const updateRole = useCallback((role: Role) => {
-    setCurrentRole(role);
-    if (currentUser) {
-      const updatedUser = { ...currentUser, role };
-      setCurrentUser(updatedUser);
-    }
-  }, [currentUser]);
-
+  // ── RBAC helper ───────────────────────────────────────────────────────────
   const hasPermission = useCallback(
-    (requiredRoles: Role[]): boolean => {
-      return requiredRoles.includes(currentRole);
-    },
-    [currentRole]
+    (requiredRoles: Role[]) => requiredRoles.includes(currentRole),
+    [currentRole],
   );
 
   return (
     <AuthContext.Provider
-      value={{
-        currentUser,
-        currentRole,
-        isAuthenticated,
-        isLoading,
-        login,
-        logout,
-        updateRole,
-        hasPermission,
-      }}
+      value={{ currentUser, currentRole, isAuthenticated, isLoading, login, logout, hasPermission }}
     >
       {children}
     </AuthContext.Provider>
   );
 }
 
-export function useAuth() {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
+// ============================================
+// HOOK
+// ============================================
+
+export function useAuth(): AuthContextType {
+  const ctx = useContext(AuthContext);
+  if (!ctx) throw new Error('useAuth must be used within AuthProvider');
+  return ctx;
 }
 
-// RBAC helper component for protecting features
-interface ProtectedProps {
+// ============================================
+// RBAC GUARD COMPONENT
+// ============================================
+
+interface ProtectedFeatureProps {
   requiredRoles: Role[];
   children: React.ReactNode;
   fallback?: React.ReactNode;
 }
 
-export function ProtectedFeature({ requiredRoles, children, fallback = null }: ProtectedProps) {
+export function ProtectedFeature({ requiredRoles, children, fallback = null }: ProtectedFeatureProps) {
   const { hasPermission } = useAuth();
-
-  if (!hasPermission(requiredRoles)) {
-    return <>{fallback}</>;
-  }
-
-  return <>{children}</>;
+  return hasPermission(requiredRoles) ? <>{children}</> : <>{fallback}</>;
 }
