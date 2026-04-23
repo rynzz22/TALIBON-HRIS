@@ -1,0 +1,70 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Montserrat:wght@700;800&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", "Segoe UI", Roboto, system-ui, sans-serif;
+  --font-display: "Montserrat", "Inter", sans-serif;
+  
+  --color-talibon-red: #D92E2E;
+  --color-talibon-orange: #F97316;
+  --color-talibon-dark: #1F2937;
+  --color-talibon-light: #6B7280;
+  --color-gov-grey: #F3f4f6;
+}
+
+@layer base {
+  body {
+    @apply antialiased text-talibon-dark bg-slate-100 min-h-screen relative overflow-x-hidden;
+  }
+
+  /* Atmospheric Gradient Background */
+  body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: 
+      radial-gradient(circle at 10% 20%, rgba(217, 46, 46, 0.05) 0%, transparent 40%),
+      radial-gradient(circle at 90% 80%, rgba(249, 115, 22, 0.05) 0%, transparent 40%),
+      radial-gradient(circle at 50% 50%, rgba(243, 244, 246, 1) 0%, rgba(226, 232, 240, 1) 100%);
+    z-index: -1;
+  }
+}
+
+.glass-panel {
+  @apply bg-white/60 backdrop-blur-xl border border-white/40 shadow-xl;
+}
+
+.glass-card {
+  @apply bg-white/40 backdrop-blur-md border border-white/40 shadow-lg hover:bg-white/60 transition-all duration-300;
+}
+
+.dotted-grid {
+  background-image: radial-gradient(circle, #e2e8f0 1.5px, transparent 1px);
+  background-size: 32px 32px;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  @apply bg-slate-100;
+}
+::-webkit-scrollbar-thumb {
+  @apply bg-slate-300 rounded-full;
+}
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-talibon-red/50;
+}
+
+.nav-link {
+  @apply px-4 py-2 text-white font-bold uppercase text-xs tracking-wider transition-all hover:bg-white/10;
+}
+
+.nav-link.active {
+  @apply bg-white/20;
+}
+

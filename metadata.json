@@ -1,0 +1,6 @@
+{
+  "name": "Talibon HRIS",
+  "description": "A modern, full-stack HRIS for the Municipality of Talibon built with NestJS, React, and Supabase. Features real-time personnel management, automated payroll, and an Employee Self-Service (ESS) leave filing system.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}
