@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { Role, Employee } from '../types';
-import { SupabaseService } from '../lib/supabaseService';
 import { useToast } from './ToastContext';
 
 interface AuthContextType {
@@ -27,58 +26,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const initializeAuth = async () => {
       try {
-        const { data, error } = await SupabaseService.auth.getCurrentUser();
-        if (error || !data.user) {
-          setIsLoading(false);
-          return;
-        }
-
-        // Fetch employee data from Supabase
-        const { data: employee, error: empError } = await SupabaseService.employees.getById(
-          data.user.id
-        );
-
-        if (!empError && employee) {
-          setCurrentUser(employee as any);
+        const storedEmployee = localStorage.getItem('authEmployee');
+        if (storedEmployee) {
+          const employee = JSON.parse(storedEmployee);
+          setCurrentUser(employee);
           setCurrentRole(employee.role as Role);
           setIsAuthenticated(true);
         }
       } catch (error) {
         console.error('Failed to restore auth state:', error);
+        localStorage.removeItem('authEmployee');
       } finally {
         setIsLoading(false);
       }
     };
 
     initializeAuth();
-
-    // Listen for auth changes
-    const unsubscribe = SupabaseService.auth.onAuthStateChange((user) => {
-      if (!user) {
-        setCurrentUser(null);
-        setIsAuthenticated(false);
-      }
-    });
-
-    return () => unsubscribe?.();
   }, []);
 
   const login = useCallback(
-    async (email: string, password: string) => {
+    async (email: string, idNumber: string) => {
       try {
         setIsLoading(true);
-        const { data, error } = await SupabaseService.auth.login(email, password);
+        
+        // For ID-based auth, we use the employee record directly
+        const storedEmployee = localStorage.getItem('authEmployee');
+        if (!storedEmployee) {
+          throw new Error('Employee data not found');
+        }
 
-        if (error) throw error;
-
-        // Fetch employee data
-        const { data: employee, error: empError } = await SupabaseService.employees.getById(
-          data.user!.id
-        );
-
-        if (empError) throw empError;
-
-        setCurrentUser(employee as any);
+        const employee = JSON.parse(storedEmployee);
+        setCurrentUser(employee);
         setCurrentRole(employee.role as Role);
         setIsAuthenticated(true);
 
@@ -96,7 +74,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = useCallback(async () => {
     try {
       setIsLoading(true);
-      await SupabaseService.auth.logout();
+      localStorage.removeItem('authEmployee');
 
       setCurrentUser(null);
       setCurrentRole('employee');

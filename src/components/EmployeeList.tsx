@@ -18,25 +18,25 @@ export default function EmployeeList({ employees, loading, onAdd, onDelete, onUp
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
   const [filterDept, setFilterDept] = useState<string>('All');
   
-  const [newEmployee, setNewEmployee] = useState<Omit<Employee, 'id' | 'role' | 'status' | 'leaveBalances'>>({
-    firstName: '',
-    lastName: '',
+  const [newEmployee, setNewEmployee] = useState<Omit<Employee, 'id' | 'role' | 'status'>>({
+    first_name: '',
+    last_name: '',
     email: '',
     department: DEPARTMENTS[0],
     position: '',
     salary: 0,
-    hireDate: new Date().toISOString().split('T')[0],
-    employmentStatus: 'Regular',
-    govIds: {
-      sss: '',
-      philhealth: '',
-      pagibig: '',
-      tin: '',
-    }
+    hire_date: new Date().toISOString().split('T')[0],
+    employment_status: 'Regular',
+    id_number: '',
+    id_type: 'SSS',
+    sss: '',
+    philhealth: '',
+    pagibig: '',
+    tin: '',
   });
 
   const filteredEmployees = employees.filter(emp => {
-    const matchesSearch = `${emp.firstName} ${emp.lastName} ${emp.email} ${emp.id}`.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = `${emp.first_name} ${emp.last_name} ${emp.email} ${emp.id_number}`.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesDept = filterDept === 'All' || emp.department === filterDept;
     return matchesSearch && matchesDept;
   });
@@ -45,19 +45,25 @@ export default function EmployeeList({ employees, loading, onAdd, onDelete, onUp
     e.preventDefault();
     onAdd({
       ...newEmployee,
-      leaveBalances: { vacation: 15, sick: 15, emergency: 5 }
+      role: 'employee',
+      status: 'active',
     } as any);
     setIsAdding(false);
     setNewEmployee({
-      firstName: '',
-      lastName: '',
+      first_name: '',
+      last_name: '',
       email: '',
       department: DEPARTMENTS[0],
       position: '',
       salary: 0,
-      hireDate: new Date().toISOString().split('T')[0],
-      employmentStatus: 'Regular',
-      govIds: { sss: '', philhealth: '', pagibig: '', tin: '' }
+      hire_date: new Date().toISOString().split('T')[0],
+      employment_status: 'Regular',
+      id_number: '',
+      id_type: 'SSS',
+      sss: '',
+      philhealth: '',
+      pagibig: '',
+      tin: '',
     });
   };
 
@@ -140,11 +146,11 @@ export default function EmployeeList({ employees, loading, onAdd, onDelete, onUp
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-1">First Name</label>
-                  <input required type="text" className="w-full px-5 py-4 bg-white/5 border border-white/10 rounded-2xl focus:bg-white/10 focus:outline-none focus:border-talibon-orange transition-all font-bold placeholder:text-white/20" placeholder="e.g. Juan" value={newEmployee.firstName} onChange={e => setNewEmployee({...newEmployee, firstName: e.target.value})} />
+                  <input required type="text" className="w-full px-5 py-4 bg-white/5 border border-white/10 rounded-2xl focus:bg-white/10 focus:outline-none focus:border-talibon-orange transition-all font-bold placeholder:text-white/20" placeholder="e.g. Juan" value={newEmployee.first_name} onChange={e => setNewEmployee({...newEmployee, first_name: e.target.value})} />
                 </div>
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-1">Last Name</label>
-                  <input required type="text" className="w-full px-5 py-4 bg-white/5 border border-white/10 rounded-2xl focus:bg-white/10 focus:outline-none focus:border-talibon-orange transition-all font-bold placeholder:text-white/20" placeholder="e.g. Dela Cruz" value={newEmployee.lastName} onChange={e => setNewEmployee({...newEmployee, lastName: e.target.value})} />
+                  <input required type="text" className="w-full px-5 py-4 bg-white/5 border border-white/10 rounded-2xl focus:bg-white/10 focus:outline-none focus:border-talibon-orange transition-all font-bold placeholder:text-white/20" placeholder="e.g. Dela Cruz" value={newEmployee.last_name} onChange={e => setNewEmployee({...newEmployee, last_name: e.target.value})} />
                 </div>
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-1">Official Email</label>
@@ -166,32 +172,53 @@ export default function EmployeeList({ employees, loading, onAdd, onDelete, onUp
                 </div>
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-1">Effective Date</label>
-                  <input required type="date" className="w-full px-5 py-4 bg-white/5 border border-white/10 rounded-2xl focus:bg-white/10 focus:outline-none focus:border-talibon-orange transition-all font-bold" value={newEmployee.hireDate} onChange={e => setNewEmployee({...newEmployee, hireDate: e.target.value})} />
+                  <input required type="date" className="w-full px-5 py-4 bg-white/5 border border-white/10 rounded-2xl focus:bg-white/10 focus:outline-none focus:border-talibon-orange transition-all font-bold" value={newEmployee.hire_date} onChange={e => setNewEmployee({...newEmployee, hire_date: e.target.value})} />
                 </div>
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-1">Employment Status</label>
-                  <select className="w-full px-5 py-4 bg-white/5 border border-white/10 rounded-2xl focus:bg-white/10 focus:outline-none focus:border-talibon-orange transition-all font-bold" value={newEmployee.employmentStatus} onChange={e => setNewEmployee({...newEmployee, employmentStatus: e.target.value as any})}>
+                  <select className="w-full px-5 py-4 bg-white/5 border border-white/10 rounded-2xl focus:bg-white/10 focus:outline-none focus:border-talibon-orange transition-all font-bold" value={newEmployee.employment_status} onChange={e => setNewEmployee({...newEmployee, employment_status: e.target.value as any})}>
                     <option value="Regular" className="bg-slate-900">Regular</option>
                     <option value="Casual" className="bg-slate-900">Casual</option>
                     <option value="Contractual" className="bg-slate-900">Contractual</option>
                   </select>
                 </div>
+                
+                {/* ID Section */}
+                <div className="lg:col-span-4 grid grid-cols-1 md:grid-cols-2 gap-6 p-6 bg-white/5 rounded-3xl border border-white/5">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-1">ID Type</label>
+                    <select required className="w-full px-5 py-4 bg-white/5 border border-white/10 rounded-2xl focus:bg-white/10 focus:outline-none focus:border-talibon-orange transition-all font-bold" value={newEmployee.id_type} onChange={e => setNewEmployee({...newEmployee, id_type: e.target.value as any})}>
+                      <option value="SSS" className="bg-slate-900">SSS</option>
+                      <option value="PhilHealth" className="bg-slate-900">PhilHealth</option>
+                      <option value="Pag-IBIG" className="bg-slate-900">Pag-IBIG</option>
+                      <option value="TIN" className="bg-slate-900">TIN</option>
+                      <option value="Driver License" className="bg-slate-900">Driver License</option>
+                      <option value="Passport" className="bg-slate-900">Passport</option>
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-1">ID Number</label>
+                    <input required type="text" className="w-full px-5 py-4 bg-white/5 border border-white/10 rounded-2xl focus:bg-white/10 focus:outline-none focus:border-talibon-orange transition-all font-bold" placeholder="e.g. 12-3456789-0" value={newEmployee.id_number} onChange={e => setNewEmployee({...newEmployee, id_number: e.target.value})} />
+                  </div>
+                </div>
+
+                {/* Government IDs Section */}
                 <div className="lg:col-span-4 grid grid-cols-1 md:grid-cols-4 gap-6 p-6 bg-white/5 rounded-3xl border border-white/5">
                    <div className="space-y-2">
                      <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-1">SSS Number</label>
-                     <input type="text" className="w-full px-5 py-4 bg-white/5 border border-white/10 rounded-2xl focus:bg-white/10 focus:outline-none transition-all font-bold" value={newEmployee.govIds?.sss} onChange={e => setNewEmployee({...newEmployee, govIds: {...newEmployee.govIds, sss: e.target.value}})} />
+                     <input type="text" className="w-full px-5 py-4 bg-white/5 border border-white/10 rounded-2xl focus:bg-white/10 focus:outline-none transition-all font-bold" value={newEmployee.sss} onChange={e => setNewEmployee({...newEmployee, sss: e.target.value})} />
                    </div>
                    <div className="space-y-2">
                      <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-1">PhilHealth</label>
-                     <input type="text" className="w-full px-5 py-4 bg-white/5 border border-white/10 rounded-2xl focus:bg-white/10 focus:outline-none transition-all font-bold" value={newEmployee.govIds?.philhealth} onChange={e => setNewEmployee({...newEmployee, govIds: {...newEmployee.govIds, philhealth: e.target.value}})} />
+                     <input type="text" className="w-full px-5 py-4 bg-white/5 border border-white/10 rounded-2xl focus:bg-white/10 focus:outline-none transition-all font-bold" value={newEmployee.philhealth} onChange={e => setNewEmployee({...newEmployee, philhealth: e.target.value})} />
                    </div>
                    <div className="space-y-2">
                      <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-1">Pag-IBIG MID</label>
-                     <input type="text" className="w-full px-5 py-4 bg-white/5 border border-white/10 rounded-2xl focus:bg-white/10 focus:outline-none transition-all font-bold" value={newEmployee.govIds?.pagibig} onChange={e => setNewEmployee({...newEmployee, govIds: {...newEmployee.govIds, pagibig: e.target.value}})} />
+                     <input type="text" className="w-full px-5 py-4 bg-white/5 border border-white/10 rounded-2xl focus:bg-white/10 focus:outline-none transition-all font-bold" value={newEmployee.pagibig} onChange={e => setNewEmployee({...newEmployee, pagibig: e.target.value})} />
                    </div>
                    <div className="space-y-2">
                      <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-1">TIN</label>
-                     <input type="text" className="w-full px-5 py-4 bg-white/5 border border-white/10 rounded-2xl focus:bg-white/10 focus:outline-none transition-all font-bold" value={newEmployee.govIds?.tin} onChange={e => setNewEmployee({...newEmployee, govIds: {...newEmployee.govIds, tin: e.target.value}})} />
+                     <input type="text" className="w-full px-5 py-4 bg-white/5 border border-white/10 rounded-2xl focus:bg-white/10 focus:outline-none transition-all font-bold" value={newEmployee.tin} onChange={e => setNewEmployee({...newEmployee, tin: e.target.value})} />
                    </div>
                 </div>
                 <div className="flex items-end gap-3 lg:col-start-4">
@@ -240,11 +267,11 @@ export default function EmployeeList({ employees, loading, onAdd, onDelete, onUp
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">First Name</label>
-                    <input required type="text" className="w-full px-5 py-4 bg-white/40 border border-white/60 rounded-2xl focus:bg-white focus:outline-none focus:border-talibon-red/30 transition-all font-bold" value={editingEmployee.firstName} onChange={e => setEditingEmployee({...editingEmployee, firstName: e.target.value})} />
+                    <input required type="text" className="w-full px-5 py-4 bg-white/40 border border-white/60 rounded-2xl focus:bg-white focus:outline-none focus:border-talibon-red/30 transition-all font-bold" value={editingEmployee.first_name} onChange={e => setEditingEmployee({...editingEmployee, first_name: e.target.value})} />
                   </div>
                   <div className="space-y-2">
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Last Name</label>
-                    <input required type="text" className="w-full px-5 py-4 bg-white/40 border border-white/60 rounded-2xl focus:bg-white focus:outline-none focus:border-talibon-red/30 transition-all font-bold" value={editingEmployee.lastName} onChange={e => setEditingEmployee({...editingEmployee, lastName: e.target.value})} />
+                    <input required type="text" className="w-full px-5 py-4 bg-white/40 border border-white/60 rounded-2xl focus:bg-white focus:outline-none focus:border-talibon-red/30 transition-all font-bold" value={editingEmployee.last_name} onChange={e => setEditingEmployee({...editingEmployee, last_name: e.target.value})} />
                   </div>
                   <div className="space-y-2">
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Official Email</label>
@@ -307,10 +334,10 @@ export default function EmployeeList({ employees, loading, onAdd, onDelete, onUp
                     <td className="px-8 py-6">
                       <div className="flex items-center gap-4">
                         <div className="w-12 h-12 bg-white/60 text-talibon-red rounded-2xl flex items-center justify-center font-black shadow-sm group-hover:scale-110 transition-transform border border-white/80 backdrop-blur-md">
-                          {emp.firstName[0]}{emp.lastName[0]}
+                          {emp.first_name[0]}{emp.last_name[0]}
                         </div>
                         <div>
-                          <p className="font-black text-slate-800 tracking-tight text-lg leading-none">{emp.firstName} {emp.lastName}</p>
+                          <p className="font-black text-slate-800 tracking-tight text-lg leading-none">{emp.first_name} {emp.last_name}</p>
                           <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1.5 flex items-center gap-1.5">
                              <Mail size={10} className="text-talibon-red" /> {emp.email}
                           </p>
@@ -324,7 +351,7 @@ export default function EmployeeList({ employees, loading, onAdd, onDelete, onUp
                     <td className="px-6 py-6">
                        <p className="text-sm font-black text-slate-800 tracking-tight font-mono">{formatCurrency(emp.salary)}</p>
                     </td>
-                    <td className="px-6 py-6 text-xs text-slate-500 font-bold">{formatDate(emp.hireDate)}</td>
+                    <td className="px-6 py-6 text-xs text-slate-500 font-bold">{formatDate(emp.hire_date)}</td>
                     <td className="px-8 py-6 text-right">
                       <div className="flex justify-end gap-2">
                         <button 

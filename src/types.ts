@@ -17,6 +17,8 @@ export interface Employee {
   philhealth?: string;
   pagibig?: string;
   tin?: string;
+  id_number: string;
+  id_type: 'SSS' | 'PhilHealth' | 'Pag-IBIG' | 'TIN' | 'Driver License' | 'Passport';
   created_at?: string;
   updated_at?: string;
 }

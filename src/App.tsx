@@ -99,6 +99,7 @@ function AppContent() {
         user_name: `${currentUser?.first_name} ${currentUser?.last_name}`,
         action: 'CREATE',
         target: 'Employee',
+        timestamp: new Date().toISOString(),
       });
     },
     onError: (error: any) => {
@@ -107,7 +108,11 @@ function AppContent() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => SupabaseService.employees.delete(id),
+    mutationFn: async (id: string) => {
+      const { error } = await SupabaseService.employees.delete(id);
+      if (error) throw error;
+      return id;
+    },
     onSuccess: (_, employeeId) => {
       addToast('Employee deleted successfully', 'success');
       queryClient.invalidateQueries({ queryKey: ['employees'] });
@@ -116,6 +121,7 @@ function AppContent() {
         user_name: `${currentUser?.first_name} ${currentUser?.last_name}`,
         action: 'DELETE',
         target: `Employee ${employeeId}`,
+        timestamp: new Date().toISOString(),
       });
     },
     onError: (error: any) => {
@@ -124,7 +130,11 @@ function AppContent() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: any }) => SupabaseService.employees.update(id, data),
+    mutationFn: async ({ id, data }: { id: string; data: any }) => {
+      const { data: result, error } = await SupabaseService.employees.update(id, data);
+      if (error) throw error;
+      return result;
+    },
     onSuccess: (_, { id }) => {
       addToast('Employee updated successfully', 'success');
       queryClient.invalidateQueries({ queryKey: ['employees'] });
@@ -133,6 +143,7 @@ function AppContent() {
         user_name: `${currentUser?.first_name} ${currentUser?.last_name}`,
         action: 'UPDATE',
         target: `Employee ${id}`,
+        timestamp: new Date().toISOString(),
       });
     },
     onError: (error: any) => {
@@ -355,11 +366,14 @@ function AppContent() {
                   <AttendanceTracker 
                     records={attendanceRecords} 
                     currentUserRole={currentRole}
-                    onLog={(type) => SupabaseService.attendance.log(currentUser?.id || '1', type).then(() => 
-                      queryClient.invalidateQueries({ queryKey: ['attendance'] })
-                    ).catch((error) => {
-                      addToast(error.message || 'Failed to log attendance', 'error');
-                    })}
+                    onLog={async (type) => {
+                      try {
+                        await SupabaseService.attendance.log(currentUser?.id || '1', type);
+                        queryClient.invalidateQueries({ queryKey: ['attendance'] });
+                      } catch (error: any) {
+                        addToast(error.message || 'Failed to log attendance', 'error');
+                      }
+                    }}
                   />
                 )
               )}
